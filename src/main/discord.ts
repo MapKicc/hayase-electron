@@ -14,7 +14,7 @@ function throttle <T extends (...args: any[]) => unknown>(callback: T, waitFor: 
 }
 
 export default class Discord {
-  discord = new Client({ transport: { type: 'ipc' }, clientId: '954855428355915797' })
+  discord = new Client({ transport: { type: 'ipc' }, clientId: '981509069309354054' })
   debouncedDiscordRPC = throttle(() => this.setDiscordRPC(), 2000)
   position: MediaPositionState | undefined = undefined
   playback: 'none' | 'paused' | 'playing' = 'none'
@@ -45,37 +45,40 @@ export default class Discord {
 
   setDiscordRPC () {
     if (this.discord.user) {
+      if (!this.session?.title) {
+        this.discord.request('SET_ACTIVITY', {
+          pid: process.pid,
+          activity: null
+        })
+        return
+      }
+
       const position = (this.position?.position ?? 0) * 1000
       const duration = (this.position?.duration ?? 0) * 1000
+
+      const currentTime = this.position?.position ?? 0
+      const timeText = `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, '0')}`
+
+      let state = this.allowDiscordDetails ? this.session.description : 'Watching anime'
+      if (this.playback === 'paused') {
+        state = `⏸ Paused • ${state} (${timeText})`
+      }
+
       const status = {
         pid: process.pid,
         activity: {
           type: 3,
-          name: 'Hayase',
-          state: this.allowDiscordDetails ? this.session?.description ?? 'Streaming anime torrents! 🍿' : 'Streaming anime torrents! 🍿',
-          details: this.allowDiscordDetails ? this.session?.title ?? 'Looking around...' : 'Looking around...',
+          name: 'Crunchyroll',
+          state,
+          details: this.allowDiscordDetails ? this.session.title : 'Anime',
           timestamps: {
             start: this.allowDiscordDetails && this.position ? Date.now() - position : undefined,
             end: this.allowDiscordDetails && this.position && this.playback === 'playing' ? Date.now() + (duration - position) : undefined
           },
           assets: {
-            large_image: this.allowDiscordDetails && this.session?.image ? this.session.image : 'logo',
-            large_text: 'https://github.com/hayase-app/ui'
-          },
-          buttons: [
-            {
-              label: 'Download app',
-              url: 'https://github.com/hayase-app/ui/releases/latest'
-            },
-            {
-              label: 'Watch on Hayase',
-              url: 'hayase://anime/' + this.mediaId
-            }
-          ],
-          party: {
-            id: '1222'
-          },
-          instance: true
+            large_image: this.allowDiscordDetails && this.session.image ? this.session.image : 'logo',
+            large_text: this.allowDiscordDetails ? this.session.title : 'Anime'
+          }
         }
       }
       this.discord.request('SET_ACTIVITY', status)

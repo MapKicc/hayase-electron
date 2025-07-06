@@ -196,8 +196,7 @@ export default class TorrentClient {
       torrentPort: settings.torrentPort,
       dhtPort: settings.dhtPort,
       maxConns: settings.maxConns,
-      peerId,
-      secure: true
+      peerId
     }
     this[client] = new WebTorrent(this[opts])
     this[client].on('error', console.error)
@@ -437,7 +436,7 @@ export default class TorrentClient {
       const progress = this._wireProgress(wire, torrent)
 
       return {
-        ip: wire.remoteAddress + ':' + wire.remotePort,
+        ip: wire.remoteAddress.replace(/^::ffff:/, '') + ':' + wire.remotePort,
         seeder: progress === 1 || wire.isSeeder,
         client: `${parsed.client} ${parsed.version ?? '?'}`,
         progress,
